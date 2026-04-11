@@ -138,7 +138,103 @@ CLI 当前支持这些参数：
 - `link_id`
 - `order_type`
 
-可参考 `assets/examples/tickets.template.json` 作为脱敏模板，不要提交真实数据。
+可参考 `assets/examples/tickets.template.json`
+
+这里要特别区分两个层次，避免调用时把字段传错：
+
+1. `selection`
+   这是传给 `btb.build_ticket_config_from_selection(...)` 的“选择参数”，用于告诉上游“你选了第几个票档、第几个购票人、第几个地址”。
+2. `config`
+   这是 `build_ticket_config_from_selection(...)` 生成出来的最终下单配置，才会包含 `screen_id`、`sku_id`、`buyer_info`、`deliver_info`、`cookies` 这些实际执行字段。
+
+不要把 `config` 里的字段直接塞回 `selection`。例如：
+
+- `selection` 里用的是 `ticket_index`，不是 `sku_id`
+- `selection` 里用的是 `buyer_indices`，不是 `buyer_info`
+- `selection` 里用的是 `address_index`，不是 `deliver_info`
+
+## 示例
+
+下面这个例子专门说明“从 `purchase_context` 里的列表索引，生成最终 `config`”。
+
+假设你已经拿到了：
+
+- `ticket_options[0]`
+- `buyers[0]`
+- `addresses[0]`
+
+那么传给 `build_ticket_config_from_selection(...)` 的 `selection` 应该长这样：
+
+```json
+{
+  "ticket_index": 0,
+  "buyer_indices": [0],
+  "address_index": 0,
+  "buyer": "张三",
+  "tel": "13800000000"
+}
+```
+
+对应的调用方式：
+
+```python
+import interface as btb
+
+purchase_context = btb.fetch_purchase_context(115385, selected_date="2026-04-25")
+
+selection = {
+    "ticket_index": 0,
+    "buyer_indices": [0],
+    "address_index": 0,
+    "buyer": "张三",
+    "tel": "13800000000",
+}
+
+config = btb.build_ticket_config_from_selection(purchase_context, selection)
+validation = btb.validate_config(config)
+```
+
+上面生成出来的 `config` 才会是最终执行层需要的结构，可参考下面这个脱敏结果：
+
+```json
+{
+  "username": "masked-user",
+  "detail": "masked-user-示例活动-4月25日-预售票-张三",
+  "count": 1,
+  "screen_id": 332608,
+  "project_id": 115385,
+  "is_hot_project": false,
+  "sku_id": 856476,
+  "order_type": 1,
+  "pay_money": 199,
+  "buyer_info": [
+    {
+      "id": 10001,
+      "name": "张三",
+      "personal_id": "320************123"
+    }
+  ],
+  "buyer": "张三",
+  "tel": "13800000000",
+  "deliver_info": {
+    "name": "张三",
+    "tel": "13800000000",
+    "addr_id": 20001,
+    "addr": "江苏省南京市示例区示例路100号"
+  },
+  "cookies": [
+    {
+      "name": "SESSDATA",
+      "value": "replace-me"
+    },
+    {
+      "name": "bili_jct",
+      "value": "replace-me"
+    }
+  ],
+  "phone": ""
+}
+```
 
 ## 引导式交互流程
 

@@ -1,4 +1,5 @@
 {
+  "_comment": "This file is the final config shape used for execution, not the selection payload for build_ticket_config_from_selection().",
   "username": "your-bilibili-username",
   "detail": "event-summary-for-logs",
   "count": 1,

@@ -2,9 +2,11 @@
 
 # 抢票.skill
 
-<img src="./assets/hello.png" alt="永雏塔菲.skill 桂冠头图：历史上第一个虚拟主播 skill" width="48%">
+<img src="./assets/hello.png" alt="永雏塔菲.skill 桂冠头图：历史上第一个虚拟主播 skill" width="58%">
 
-<br>
+</br>
+</br>
+
 
 [![Skill: bili-ticker-buy](https://img.shields.io/badge/Skill-bili--ticker--buy-f43f5e)](./SKILL.md) [![Version: v0.1.0](https://img.shields.io/badge/Version-v0.1.0-111827)](./SKILL.md) [![Runtime: Python 3.11+](https://img.shields.io/badge/Runtime-Python%203.11%2B-2563eb)](./meta.json) [![Dependency: biliTickerBuy](https://img.shields.io/badge/Dependency-biliTickerBuy-10b981)](./biliTickerBuy) [![Integration: import bilitickerbuy](https://img.shields.io/badge/Integration-import%20bilitickerbuy-f59e0b)](./references/workflow.md) [![License: MIT](https://img.shields.io/badge/License-MIT-facc15)](./LICENSE)
 

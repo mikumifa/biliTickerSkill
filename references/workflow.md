@@ -4,6 +4,11 @@
 
 这个 skill 是本地 `biliTickerBuy` 项目的轻量编排层。
 
+当前能力范围包含两类入口：
+
+1. 用户已经给出活动链接或项目 ID，直接继续登录确认、读详情、选票和抢票。
+2. 用户还没给链接，只是说想找某个漫展、某个 IP 的活动、某个城市最近有什么展，这时先帮用户搜索候选活动，再继续后面的流程。
+
 仓库默认把依赖放在 `./biliTickerBuy` 这个 git submodule 下。如果是新仓库，先初始化：
 
 ```bash
@@ -18,8 +23,6 @@ uv sync
 
 目标是确保 `biliTickerBuy/.venv` 存在。后续执行默认都走这个虚拟环境；如果 `.venv` 已经存在且可用，直接复用即可。
 
-默认登录态也应复用。`bilitickerbuy` 现在默认会走持久化的 cookie 存储路径，所以新开一个 skill 时，应该先检查是否已经登录，而不是每次都重新登录。
-
 ## 优先使用 `.venv`
 
 推荐优先使用 `biliTickerBuy/.venv` 中的 Python 解释器。
@@ -27,17 +30,15 @@ uv sync
 例如在 Windows PowerShell 下可以直接执行：
 
 ```powershell
-.\biliTickerBuy\.venv\Scripts\python.exe -c "import bilitickerbuy; print('ok')"
+.\biliTickerBuy\.venv\Scripts\python.exe -c "import interface as btb; print('ok')"
 ```
-
-只有在你已经确认当前解释器里能直接导入 `bilitickerbuy` 时，才可以跳过 `.venv`。
 
 ## 优先使用 import
 
 推荐直接 import：
 
 ```python
-import bilitickerbuy
+import interface as btb
 ```
 
 ## 当前暴露的库接口
@@ -111,32 +112,36 @@ CLI 当前支持这些参数：
 
 这类自然语言请求适用，例如“帮我买这张票”：
 
-1. 先调 `bilitickerbuy.get_login_state(...)`。
+1. 先调 `btb.get_login_state(...)`。
 2. 如果已经登录，把当前登录用户名显示给用户，并让用户确认是否使用这个账号继续。
-3. 如果 `logged_in` 是 `false`，先调 `bilitickerbuy.start_qr_login(...)` 获取登录信息。
+3. 如果 `logged_in` 是 `false`，先调 `btb.start_qr_login(...)` 获取登录信息。
 4. 把 `login_url` 放进返回给用户的结果里，让用户在手机上打开。
 5. 在同一个结果里明确让用户选择“已在手机打开并登录，继续检查”或“还没登录，稍后再试”。
-6. 只有当用户确认已登录时，再调 `bilitickerbuy.poll_qr_login(...)` 等待登录完成。
+6. 只有当用户确认已登录时，再调 `btb.poll_qr_login(...)` 等待登录完成。
 7. 登录完成后，再把当前登录用户名显示给用户确认。
-8. 然后调 `bilitickerbuy.fetch_purchase_context(url_or_project_id, cookies=..., selected_date=None)`。
+8. 然后调 `btb.fetch_purchase_context(url_or_project_id, cookies=..., selected_date=None)`。
 9. 第一次进入票种选择阶段时，要一次性把完整关键信息发给用户，不要拆成多轮零散补充。
 10. 这一步优先使用表格，把活动、日期、票档、购票人、地址都排清楚。
 11. 如果 `sales_dates` 非空且用户还没选日期，先把日期列出来让用户选。
 12. 把 `ticket_options` 列出来，让用户明确选中具体票档。
 13. 把登录账号下的 `buyers` 和 `addresses` 列出来，让用户明确选择。
 14. 额外收集 `buyer` 和 `tel` 这两个联系人字段。
-15. 用 `bilitickerbuy.build_ticket_config_from_selection` 生成最终配置。
+15. 用 `btb.build_ticket_config_from_selection` 生成最终配置。
 16. 然后再做校验和启动。
+
+真正开始执行抢票前，再参考 `references/buy.md`。如果还在登录、搜索、确认用户选择阶段，不要提前进入抢票执行 reference。
 
 ## 关键词找票
 
-如果用户不是直接给链接，而是只给活动名字、关键词、IP 名称，先参考 `references/search.md`。
+如果用户不是直接给链接，而是只给活动名字、关键词、IP 名称，或者直接说想找漫展，先参考 `references/search.md`。
 
 原则是：
 
 1. 先搜，再让用户确认目标活动。
 2. 不要先要求用户自己去复制活动链接。
 3. 搜索结果优先整理成文字格式发给用户。
+4. `btb.search_tickets(...)` 如果发现当前未登录，会直接返回需要登录的结果；这时就停止搜索并进入登录流程，不允许改走公开网页。
+5. “帮我找漫展”是当前 skill 明确支持的用法，不要把它误判成能力外需求。
 
 ## 首次展示格式
 
@@ -229,7 +234,5 @@ CLI 当前支持这些参数：
 
 1. 先确认 `biliTickerBuy/.venv` 可用；不可用时先在 `biliTickerBuy` 目录运行 `uv sync`。
 2. 根据用户参数或交互式选择构造配置，或者读取现成 JSON。
-3. 先调用 `bilitickerbuy.validate_config`，有错误就停。
-4. 再调用 `bilitickerbuy.start_buy` 并传入运行参数。
-5. 持续轮询 `bilitickerbuy.task_status`，直到任务结束。
-6. 运行时产物不要写回 git 跟踪的示例文件。
+3. 如果用户只是确认信息，还不要开抢；真正开始执行时再去读 `references/buy.md`。
+4. 运行时产物不要写回 git 跟踪的示例文件。

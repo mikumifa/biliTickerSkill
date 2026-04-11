@@ -6,11 +6,11 @@
 
 </br>
 
-[![Skill: biliTickerSkill](https://img.shields.io/badge/Skill-biliTickerSkill-f43f5e)](./SKILL.md) [![Version: v0.1.0](https://img.shields.io/badge/Version-v0.1.0-111827)](./SKILL.md) [![Runtime: Python 3.11+](https://img.shields.io/badge/Runtime-Python%203.11%2B-2563eb)](./meta.json) [![Dependency: biliTickerBuy](https://img.shields.io/badge/Dependency-biliTickerBuy-10b981)](./biliTickerBuy) [![Integration: import bilitickerbuy](https://img.shields.io/badge/Integration-import%20bilitickerbuy-f59e0b)](./references/workflow.md) [![License: MIT](https://img.shields.io/badge/License-MIT-facc15)](./LICENSE)
+[![Skill: biliTickerSkill](https://img.shields.io/badge/Skill-biliTickerSkill-f43f5e)](./SKILL.md) [![Version: v0.1.0](https://img.shields.io/badge/Version-v0.1.0-111827)](./SKILL.md) [![Runtime: Python 3.11+](https://img.shields.io/badge/Runtime-Python%203.11%2B-2563eb)](./meta.json) [![Dependency: biliTickerBuy](https://img.shields.io/badge/Dependency-biliTickerBuy-10b981)](./biliTickerBuy) [![Integration: import biliTickerBuy.interface](https://img.shields.io/badge/Integration-import%20biliTickerBuy.interface-f59e0b)](./references/workflow.md) [![License: MIT](https://img.shields.io/badge/License-MIT-facc15)](./LICENSE)
 
 [快速开始](#quickstart) · [用户交互示例](#examples) · [能力边界](#boundaries)
 
-为什么二次元一年要抢这么多的票！ **让你的 Codex / Claude Code 直接接管 `biliTickerBuy`**
+为什么二次元一年要抢这么多的票！ **让你的 Codex / Claude Code 直接接管 `biliTickerBuy`，先帮你找漫展，再继续查票或抢票**
 
 </div>
 
@@ -38,6 +38,18 @@ uv sync
 
 ## Examples
 
+### 帮你找漫展
+
+```text
+用 BiliTickerSkill 帮我找一下上海最近的原神漫展
+```
+
+```text
+帮我看看 5 月北京有什么二次元展子
+```
+
+这类请求也属于当前 skill 的能力范围。它不应该先让用户自己去翻网页找链接，而应该先基于关键词、城市、时间等线索搜索会员购活动，整理候选结果，再让用户确认目标活动。
+
 ### 帮你抢票
 
 ```text
@@ -59,6 +71,11 @@ uv sync
 它当前**不**能做：
 
 - 抢b站会员购以外的票
+
+它当前**能**做：
+
+- 帮用户按关键词、IP、城市、时间范围找 Bilibili 会员购上的漫展和其他活动
+- 在用户确认目标活动后继续读取活动详情、整理票档并进入抢票流程
 
 ## 相关文件
 

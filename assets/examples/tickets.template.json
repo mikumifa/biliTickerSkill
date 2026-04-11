@@ -1,0 +1,38 @@
+{
+  "username": "your-bilibili-username",
+  "detail": "event-summary-for-logs",
+  "count": 1,
+  "screen_id": 0,
+  "project_id": 0,
+  "is_hot_project": false,
+  "sku_id": 0,
+  "order_type": 1,
+  "pay_money": 0,
+  "buyer_info": [
+    {
+      "id": 0,
+      "name": "buyer-name",
+      "personal_id": "buyer-id-card"
+    }
+  ],
+  "buyer": "contact-name",
+  "tel": "contact-phone",
+  "deliver_info": {
+    "name": "receiver-name",
+    "tel": "receiver-phone",
+    "addr_id": 0,
+    "addr": "receiver-address"
+  },
+  "cookies": [
+    {
+      "name": "SESSDATA",
+      "value": "replace-me"
+    },
+    {
+      "name": "bili_jct",
+      "value": "replace-me"
+    }
+  ],
+  "phone": "",
+  "link_id": 0
+}

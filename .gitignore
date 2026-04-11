@@ -1,0 +1,9 @@
+# skill runtime
+workspace/
+tmp/
+logs/
+*.local.json
+
+# python
+__pycache__/
+*.pyc

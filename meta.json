@@ -1,0 +1,15 @@
+{
+  "name": "bili-ticker-buy",
+  "version": "0.1.0",
+  "entry": "SKILL.md",
+  "targets": [
+    "codex",
+    "claude-code"
+  ],
+  "runtime": {
+    "python": ">=3.11"
+  },
+  "dependency": {
+    "local_project": "biliTickerBuy"
+  }
+}

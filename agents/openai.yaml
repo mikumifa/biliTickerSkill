@@ -1,0 +1,7 @@
+interface:
+  display_name: "Bili Ticket Buy"
+  short_description: "Drive local biliTickerBuy workflows from a skill."
+  default_prompt: "Use $bili-ticker-buy to locate my local biliTickerBuy project, validate the environment, and prepare or run the correct ticket-buy command."
+
+policy:
+  allow_implicit_invocation: false

@@ -14,6 +14,7 @@ user-invocable: true
 触发这个 skill 后优先阅读：
 
 - `references/workflow.md`
+- `references/search.md`
 - `assets/examples/tickets.template.json`
 
 在 `uv` 准备好的环境里直接使用 Python import：
@@ -50,6 +51,8 @@ task_status(task_id: str) -> dict
 12. 当用户表达不完整但意图明显时，可以先整理出 1 到 3 个最可能的理解，再让用户确认，不要直接报缺字段。
 13. 具体的登录流程、自然语言补全和交互细节都以 `references/workflow.md` 为准。
 14. 与用户对话时要尽量口语化、人性化，不要频繁要求用户按固定格式回复。
+15. 登录成功后的 cookies 默认应持久化复用；新开一个 skill 时，应先检查现有登录态，而不是默认重新登录。
+16. 当进入票种选择阶段时，第一次必须把活动关键信息一次性完整展示给用户，并优先用表格呈现。
 
 ## 抢票流程
 
@@ -65,16 +68,17 @@ task_status(task_id: str) -> dict
 10. 整个登录过程不打开任何 UI。
 11. 登录成功后，再调用 `bilitickerbuy.get_login_state` 或直接读取登录结果，把当前用户名显示给用户确认。
 12. 确认账号无误后，再调用 `bilitickerbuy.fetch_purchase_context`，传入活动 URL 或 `project_id`。
-13. 把拿到的可选项展示给用户，而不是自己猜：
+13. 第一次进入票种选择阶段时，把活动关键信息一次性完整展示给用户，并优先用表格呈现，再继续提问。
+14. 把拿到的可选项展示给用户，而不是自己猜：
 
 - 如果活动有多个日期，先展示 `sales_dates`
 - 展示当前日期下的 `ticket_options`
 - 展示当前账号下的 `buyers`
 - 展示当前账号下的 `addresses`
 
-14. 如果日期或票档不唯一，必须让用户明确选择，不能默认取第一项。
-15. 让用户明确确认这些信息：票档、购票人、联系人、联系电话、收货地址。
-16. 调用 `bilitickerbuy.build_ticket_config_from_selection` 生成最终配置。
-17. 先运行 `bilitickerbuy.validate_config`。
-18. 再用 `bilitickerbuy.start_buy` 启动后台任务。
-19. 用 `bilitickerbuy.task_status` 轮询状态。
+15. 如果日期或票档不唯一，必须让用户明确选择，不能默认取第一项。
+16. 让用户明确确认这些信息：票档、购票人、联系人、联系电话、收货地址。
+17. 调用 `bilitickerbuy.build_ticket_config_from_selection` 生成最终配置。
+18. 先运行 `bilitickerbuy.validate_config`。
+19. 再用 `bilitickerbuy.start_buy` 启动后台任务。
+20. 用 `bilitickerbuy.task_status` 轮询状态。

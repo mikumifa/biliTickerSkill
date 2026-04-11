@@ -23,6 +23,19 @@ uv sync
 
 目标是确保 `biliTickerBuy/.venv` 存在。后续执行默认都走这个虚拟环境；如果 `.venv` 已经存在且可用，直接复用即可。
 
+## 写入与权限
+
+这个 skill 默认允许并依赖 `biliTickerBuy` 目录里的持久化文件：
+
+- `cookies.json`
+- `config.json`
+- `btb_logs/`
+- `btb_runs/`
+
+登录态、长任务状态、日志和结构化结果都应该优先持久化在这些目录里，而不是默认写到临时目录。
+
+如果当前环境对 skill 目录有沙箱限制，应该在真正开跑前先确认写权限；如果没有限制，就直接使用 skill 目录里的持久化文件。
+
 ## 优先使用 `.venv`
 
 推荐优先使用 `biliTickerBuy/.venv` 中的 Python 解释器。
@@ -65,6 +78,10 @@ import interface as btb
 - `run_buy_sync`
 - `start_buy`
 - `task_status`
+- `start_managed_buy`
+- `managed_task_status`
+- `normalize_time_start`
+- `normalize_interval`
 
 CLI 当前支持这些参数：
 
@@ -82,6 +99,21 @@ CLI 当前支持这些参数：
 - `--ntfy_password`
 - `--web`
 - `--hide_random_message`
+
+推荐补充的参数约定：
+
+- `time_start`
+  只接受：
+  `YYYY-MM-DDTHH:MM[:SS]`
+  `HH:MM[:SS]`
+  如果用户只说 `0:36`、`23:59:59` 这种纯时刻，先补全成最近一次将来的完整时间。
+- `interval`
+  执行层最终统一为整数毫秒。
+  对话层可以接受：
+  `500`
+  `500ms`
+  `0.5s`
+  `0.36m`
 
 ## 配置结构
 
@@ -131,9 +163,33 @@ CLI 当前支持这些参数：
 
 真正开始执行抢票前，再参考 `references/buy.md`。如果还在登录、搜索、确认用户选择阶段，不要提前进入抢票执行 reference。
 
+## 长任务与多开
+
+`start_buy(...)` 和 `task_status(...)` 只适合同一个 Python 进程里的短时任务。
+
+只要满足下面任一情况，就应默认切到持久化运行：
+
+- 任务可能要跑很久
+- 需要跨回合继续查询状态
+- 需要多开几单
+- 需要稳定回传支付链接
+
+这时优先使用：
+
+- `start_managed_buy(...)`
+- `managed_task_status(...)`
+
+推荐行为：
+
+1. 每次运行分配独立 `run_id`
+2. 每个 `run_id` 独占一个 `biliTickerBuy/btb_runs/<run_id>/` 目录
+3. 在这个目录下保存 `config.json`、`runtime.json`、`status.json`、`result.json`、`events.log`
+4. 子进程中强制关闭弹窗二维码，改用结构化结果里的支付链接
+5. 多开时通过多个 `run_id` 并行，不要依赖进程内存态 task id
+
 ## 关键词找票
 
-如果用户不是直接给链接，而是只给活动名字、关键词、IP 名称，或者直接说想找漫展，先参考 `references/search.md`。
+如果用户不是直接给链接，而是只给活动名字、关键词、IP 名称、接近完整的活动标题，或者直接说想找漫展，先参考 `references/search.md`。
 
 原则是：
 
@@ -142,6 +198,7 @@ CLI 当前支持这些参数：
 3. 搜索结果优先整理成文字格式发给用户。
 4. `btb.search_tickets(...)` 如果发现当前未登录，会直接返回需要登录的结果；这时就停止搜索并进入登录流程，不允许改走公开网页。
 5. “帮我找漫展”是当前 skill 明确支持的用法，不要把它误判成能力外需求。
+6. 如果用户已经给出完整或接近完整的活动标题，例如“帮我抢票：深圳·关于我重生103次我在深圳当韭菜这回事”，应直接把这段标题拿去调用 `btb.search_tickets(...)`，通常可以准确命中目标活动。
 
 ## 首次展示格式
 

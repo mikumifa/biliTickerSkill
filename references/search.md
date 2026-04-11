@@ -1,6 +1,6 @@
 # 搜索票务
 
-当用户不是直接给活动链接，而是只给一个关键词、活动名、角色名、IP 名，或者直接说“帮我找漫展”时，先不要要求他自己去找链接。
+当用户不是直接给活动链接，而是只给一个关键词、活动名、角色名、IP 名、接近完整的活动标题，或者直接说“帮我找漫展”时，先不要要求他自己去找链接。
 
 应优先直接调用搜索接口，先把候选活动搜出来，再继续后面的选票流程。
 
@@ -20,7 +20,7 @@
 ```python
 import interface as btb
 
-result = btb.search_tickets("原神")
+result = btb.search_tickets("深圳·关于我重生103次我在深圳当韭菜这回事")
 text = btb.format_ticket_search_results_text(result)
 ```
 
@@ -115,3 +115,4 @@ format_ticket_search_results_text(search_result: dict, *, limit: int = 10) -> st
 4. 如果用户给的是模糊名称，允许先搜一次，再根据用户反馈换关键词继续搜。
 5. 如果 `search_tickets(...)` 返回 `requires_login=True`，就停止搜索并进入登录流程，不允许改走公开网页。
 6. “找漫展”本质上也是搜索会员购活动，应当由当前 skill 直接处理。
+7. 如果用户给的是完整或接近完整的活动标题，应优先原样作为关键词调用 `search_tickets(...)`；这类输入通常比拆词搜索更容易准确命中目标活动。

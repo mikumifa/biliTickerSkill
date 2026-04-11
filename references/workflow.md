@@ -1,43 +1,84 @@
-# Workflow
+# 工作流
 
-## Purpose
+## 目标
 
-This skill is a thin orchestration layer around the local `biliTickerBuy` project.
+这个 skill 是本地 `biliTickerBuy` 项目的轻量编排层。
 
-The dependency is expected at `./biliTickerBuy` as a git submodule. In a fresh clone, initialize it first with:
+仓库默认把依赖放在 `./biliTickerBuy` 这个 git submodule 下。如果是新仓库，先初始化：
 
 ```bash
 git submodule update --init --recursive
 ```
 
-## Import-first integration
+初始化后，优先在 `biliTickerBuy` 目录执行：
 
-Preferred import:
-
-```python
-from bilitickerbuy import generate_ticket_config, validate_config, start_buy, task_status
+```bash
+uv sync
 ```
 
-If the project is only present as a local folder, add it to `sys.path`:
+目标是确保 `biliTickerBuy/.venv` 存在。后续执行默认都走这个虚拟环境；如果 `.venv` 已经存在且可用，直接复用即可。
+
+## 优先使用 `.venv`
+
+推荐优先使用 `biliTickerBuy/.venv` 中的 Python 解释器。
+
+例如在 Windows PowerShell 下可以直接执行：
+
+```powershell
+.\biliTickerBuy\.venv\Scripts\python.exe -c "import bilitickerbuy; print('ok')"
+```
+
+只有在你已经确认当前解释器里能直接导入 `bilitickerbuy` 时，才可以跳过 `.venv`。
+
+## 优先使用 import
+
+推荐直接 import：
+
+```python
+import biliTickerBuy
+```
+
+如果项目只是本地目录，没有安装成包：
 
 ```python
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path.cwd() / "biliTickerBuy"))
-from bilitickerbuy import generate_ticket_config, validate_config, start_buy, task_status
+def find_skill_root() -> Path:
+    start = Path(__file__).resolve().parent if "__file__" in globals() else Path.cwd()
+    for candidate in [start, *start.parents]:
+        if (candidate / "SKILL.md").exists() and (candidate / "biliTickerBuy").exists():
+            return candidate
+    raise RuntimeError("找不到 BiliTickerSkill 根目录")
+
+SKILL_ROOT = find_skill_root()
+sys.path.insert(0, str(SKILL_ROOT.parent))
+import biliTickerBuy
 ```
 
-## Exposed library surface
+这里查找的是 skill 仓库根目录，不是当前 shell 的工作目录。
 
-The upstream package now exposes:
+## 当前暴露的库接口
 
+上游现在提供这些函数：
+
+- `fetch_project_detail`
+- `fetch_ticket_options`
+- `fetch_buyers`
+- `fetch_addresses`
+- `fetch_purchase_context`
+- `build_ticket_config_from_selection`
+- `load_ticket_config`
+- `save_ticket_config`
 - `generate_ticket_config`
+- `get_login_state`
+- `build_runtime_options`
 - `validate_config`
+- `run_buy_sync`
 - `start_buy`
 - `task_status`
 
-The upstream CLI currently supports:
+CLI 当前支持这些参数：
 
 - `buy <tickets_info>`
 - `--interval`
@@ -54,9 +95,9 @@ The upstream CLI currently supports:
 - `--web`
 - `--hide_random_message`
 
-## Config shape
+## 配置结构
 
-The buy task expects JSON with these core fields:
+抢票配置 JSON 的核心字段：
 
 - `detail`
 - `count`
@@ -70,19 +111,39 @@ The buy task expects JSON with these core fields:
 - `deliver_info`
 - `cookies`
 
-Optional fields seen upstream:
+上游里还能看到这些可选字段：
 
 - `phone`
 - `is_hot_project`
 - `link_id`
 - `order_type`
 
-Use `assets/examples/tickets.template.json` as a sanitized template. Do not commit real values.
+可参考 `assets/examples/tickets.template.json` 作为脱敏模板，不要提交真实数据。
 
-## Safe operating pattern
+## 引导式交互流程
 
-1. Build a config dict from user parameters or load a JSON file.
-2. Call `validate_config` and stop on errors.
-3. Call `start_buy` with runtime options.
-4. Poll `task_status` until the task is no longer running.
-5. Keep runtime artifacts outside git-tracked example files.
+这类自然语言请求适用，例如“帮我买这张票”：
+
+1. 先调 `biliTickerBuy.get_login_state(...)`。
+2. 如果 `logged_in` 是 `false`，流程必须停下，要求用户先扫码登录，不能继续取活动信息。
+3. 登录完成后，调 `biliTickerBuy.fetch_purchase_context(url_or_project_id, cookies=..., selected_date=None)`。
+4. 如果 `sales_dates` 非空且用户还没选日期，先把日期列出来让用户选。
+5. 把 `ticket_options` 列出来，让用户明确选中具体票档。
+6. 把登录账号下的 `buyers` 和 `addresses` 列出来，让用户明确选择。
+7. 额外收集 `buyer` 和 `tel` 这两个联系人字段。
+8. 用 `biliTickerBuy.build_ticket_config_from_selection` 生成最终配置。
+9. 然后再做校验和启动。
+
+有两个必须遵守的关卡：
+
+1. 登录关卡：未登录就不能继续。
+2. 选择关卡：用户没选日期或票档时，不能猜，必须停下来问。
+
+## 安全执行模式
+
+1. 先确认 `biliTickerBuy/.venv` 可用；不可用时先在 `biliTickerBuy` 目录运行 `uv sync`。
+2. 根据用户参数或交互式选择构造配置，或者读取现成 JSON。
+3. 先调用 `biliTickerBuy.validate_config`，有错误就停。
+4. 再调用 `biliTickerBuy.start_buy` 并传入运行参数。
+5. 持续轮询 `biliTickerBuy.task_status`，直到任务结束。
+6. 运行时产物不要写回 git 跟踪的示例文件。

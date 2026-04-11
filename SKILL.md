@@ -1,69 +1,89 @@
 ---
-name: bili-ticker-buy
-description: Use this skill when the user wants to prepare or run Bilibili ticket-buying workflows with a local biliTickerBuy project, including locating the project, validating prerequisites, shaping a ticket config, and generating or running the correct buy command in Codex or Claude Code.
+name: BiliTickerSkill
+description: 当用户想基于本地 biliTickerBuy 项目准备或执行 Bilibili 会员购抢票流程时使用此 skill，包括检查环境、确认登录、引导用户选择票档并生成或执行正确的抢票流程。
 version: "0.1.0"
 user-invocable: true
 ---
 
-# bili-ticker-buy
+# BiliTickerSkill
 
-This skill orchestrates a local `biliTickerBuy` checkout. It does not reimplement the ticketing logic.
+这个 skill 是本地 `biliTickerBuy` 项目的编排层，不重新实现抢票逻辑。
 
-The `biliTickerBuy` dependency is tracked as a git submodule in `./biliTickerBuy`. If it is missing, initialize submodules before using the skill.
+`biliTickerBuy` 作为 git submodule 放在 `./biliTickerBuy`。如果仓库是新拉取的，先初始化 submodule。
 
-Read these first when the skill triggers:
+触发这个 skill 后优先阅读：
 
 - `references/workflow.md`
-- `references/integration.md`
-- `references/claude-code.md`
 - `assets/examples/tickets.template.json`
 
-Prefer Python imports over shell commands:
+优先使用 Python import，不要优先走 shell：
 
 ```python
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path.cwd() / "biliTickerBuy"))
+def find_skill_root() -> Path:
+    start = Path(__file__).resolve().parent if "__file__" in globals() else Path.cwd()
+    for candidate in [start, *start.parents]:
+        if (candidate / "SKILL.md").exists() and (candidate / "biliTickerBuy").exists():
+            return candidate
+    raise RuntimeError("找不到 BiliTickerSkill 根目录")
 
-from bilitickerbuy import generate_ticket_config, validate_config, start_buy, task_status
+SKILL_ROOT = find_skill_root()
+sys.path.insert(0, str(SKILL_ROOT.parent))
+
+import biliTickerBuy
 ```
 
-Default API surface:
+默认 API：
 
 ```python
+fetch_purchase_context(project_input, *, cookies=None, cookies_path=None, selected_date=None, phone="") -> dict
+build_ticket_config_from_selection(purchase_context: dict, selection: dict) -> dict
 generate_ticket_config(parameters: dict) -> dict
+get_login_state(*, cookies=None, cookies_path=None) -> dict
 validate_config(config_or_path) -> dict-like ValidationResult
 start_buy(config_or_path, runtime_options: dict | None = None) -> dict
 task_status(task_id: str) -> dict
 ```
 
-## Operating rules
+## 规则
 
-1. Treat `biliTickerBuy` as the source of truth for runtime behavior and config fields.
-2. Prefer helping the user generate config, validate it, and call the library API directly.
-3. Do not invent unsupported flags, API routes, or config keys.
-4. If direct import usage is enough, do not route back through `btb`.
-5. If the user wants multi-agent orchestration, remote control, status polling, or external scheduling, then consult `references/integration.md` and propose a minimal interface to expose from `biliTickerBuy`.
-6. Keep secrets out of committed files. Never persist real cookies, tokens, phone numbers, or buyer identity data in this skill repo.
-7. When the local repo has not been installed as a package, add `./biliTickerBuy` to `sys.path` before importing `bilitickerbuy`.
-8. If `./biliTickerBuy` is absent in a fresh clone, run `git submodule update --init --recursive`.
+1. 不要把真实 cookie、token、手机号、实名信息写入这个 skill 仓库。
+2. 如果 skill 根目录下的 `biliTickerBuy` 不存在，先执行 `git submodule update --init --recursive`。
+3. 一个关键前置步骤是先在 `biliTickerBuy` 目录执行 `uv sync`，确保生成并更新 `biliTickerBuy/.venv`。
+4. 如果 `biliTickerBuy/.venv` 已经存在且可用，可以直接复用，不需要重复安装。
+5. 后续所有 Python 执行都优先使用 `biliTickerBuy/.venv` 里的解释器和依赖环境。
+6. 只有在明确已经把 `biliTickerBuy` 安装进当前解释器时，才可以直接 import；否则要显式使用 `biliTickerBuy/.venv`。
 
-## Default workflow
+## 抢票流程
 
-1. Import `bilitickerbuy`.
-2. Build or review a ticket config based on the upstream project schema.
-3. Run `validate_config` first.
-4. Use `start_buy` to create a background task.
-5. Poll with `task_status`.
+1. 先确认 `biliTickerBuy/.venv` 是否存在；如果不存在，进入 `biliTickerBuy` 目录执行 `uv sync`。
+2. 之后所有 Python 操作都使用 `biliTickerBuy/.venv`。
+3. 通过 `import biliTickerBuy` 导入统一入口。
+4. 先调用 `biliTickerBuy.get_login_state`。
+5. 如果未登录，流程必须停下，先要求用户扫码登录；登录完成前不能继续取票信息。
+6. 登录成功后，再调用 `biliTickerBuy.fetch_purchase_context`，传入活动 URL 或 `project_id`。
+7. 把拿到的可选项展示给用户，而不是自己猜：
+   - 如果活动有多个日期，先展示 `sales_dates`
+   - 展示当前日期下的 `ticket_options`
+   - 展示当前账号下的 `buyers`
+   - 展示当前账号下的 `addresses`
+8. 如果日期或票档不唯一，必须让用户明确选择，不能默认取第一项。
+9. 让用户明确确认这些信息：票档、实名人、联系人、联系电话、收货地址。
+10. 调用 `biliTickerBuy.build_ticket_config_from_selection` 生成最终配置。
+11. 先运行 `biliTickerBuy.validate_config`。
+12. 再用 `biliTickerBuy.start_buy` 启动后台任务。
+13. 用 `biliTickerBuy.task_status` 轮询状态。
 
-## When API exposure is justified
+当用户说“帮我买这张票”时，除非用户已经明确提供以下全部信息，否则不要直接进入 `start_buy`：
 
-Only recommend new `biliTickerBuy` interfaces if one of these is true:
+- 已完成登录
+- 具体日期（如果存在多个日期）
+- 具体票档
+- 购票人选择
+- 联系人姓名
+- 联系人电话
+- 收货地址选择
 
-- the skill must control long-running tasks from another process
-- the skill must fetch task status without owning the terminal session
-- the skill must prepare config in one tool and execute in another
-- the user explicitly wants a stable machine-facing contract
-
-If so, keep the first interface small: health check, config validation, run task, task status.
+如果用户还没登录，下一步就是提示用户扫码登录并等待。如果用户不知道买哪一天或哪一档，下一步就是把选项列出来并让用户选。

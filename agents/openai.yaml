@@ -1,7 +1,7 @@
 interface:
-  display_name: "Bili Ticket Buy"
-  short_description: "Drive local biliTickerBuy workflows from a skill."
-  default_prompt: "Use $bili-ticker-buy to locate my local biliTickerBuy project, validate the environment, and prepare or run the correct ticket-buy command."
+  display_name: "BiliTickerSkill"
+  short_description: "通过 skill 驱动本地 biliTickerBuy 抢票流程。"
+  default_prompt: "使用 $BiliTickerSkill 定位本地 biliTickerBuy 项目，检查环境和登录状态，引导用户选择日期与票档，并准备或执行正确的抢票流程。"
 
 policy:
   allow_implicit_invocation: false

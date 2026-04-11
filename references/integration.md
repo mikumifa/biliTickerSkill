@@ -1,44 +1,64 @@
-# Integration Contract
+# 集成约定
 
-## Why this exists
+## 为什么有这份文档
 
-Today the skill can drive `biliTickerBuy` through direct Python imports. A broader service layer is only needed when in-process calls become awkward.
+当前这个 skill 已经可以通过 Python import 直接驱动 `biliTickerBuy`。
 
-## First interface to expose if needed
+但在真正执行前，应该先确保 `biliTickerBuy/.venv` 存在并可用。也就是说，环境准备本身也是集成约定的一部分。
 
-If `biliTickerBuy` later exposes a service or callable entrypoint, keep the contract minimal:
+## 集成前置步骤
 
-### 1. Validate config
+1. 确认 `biliTickerBuy` 子模块已经初始化。
+2. 进入 `biliTickerBuy` 目录执行 `uv sync`。
+3. 确认生成了 `biliTickerBuy/.venv`。
+4. 后续所有 Python 侧的调用，都优先使用这个 `.venv`。
 
-- input: ticket config JSON
-- output: `ok`, missing fields, schema warnings
+如果 `.venv` 已经存在且可正常导入 `bilitickerbuy`，可以直接复用。
 
-### 2. Start buy task
+## 如果必须暴露接口，第一版应该长什么样
 
-- input: validated config plus runtime options
-- output: task id, start time, execution mode
+如果未来 `biliTickerBuy` 要额外暴露 service、本地 API 或可调用入口，第一版接口要尽量小，只保留最基本的能力。
 
-### 3. Task status
+### 1. 登录或健康检查
 
-- input: task id
-- output: running state, recent logs, final result when available
+- 输入：当前运行环境，必要时带上 cookies 信息
+- 输出：是否已登录、当前用户名、下一步建议动作
 
-## Implementation guidance
+### 2. 配置校验
 
-- Prefer reusing existing CLI/task code instead of duplicating buy logic.
-- Keep one source of truth for config parsing.
-- Return structured JSON, not only human-readable logs.
-- Make the interface local-first. Avoid designing for public exposure.
+- 输入：抢票配置 JSON
+- 输出：`ok`、缺失字段、格式错误、警告信息
 
-## Good candidates inside the current upstream project
+### 3. 启动抢票任务
 
-- `main.py`: current CLI surface
-- `app_cmd/buy.py`: argument normalization and launch path
-- `task/buy.py`: buy workflow implementation
-- `task/endpoint.py`: existing heartbeat-style coordination hint
+- 输入：已校验通过的配置和运行参数
+- 输出：任务 id、启动时间、运行模式
 
-## What not to do yet
+### 4. 查询任务状态
 
-- Do not design a broad REST API before the skill actually needs it.
-- Do not fork the config schema between CLI mode and service mode.
-- Do not introduce persistence requirements unless task resumption becomes necessary.
+- 输入：任务 id
+- 输出：是否仍在运行、最近日志、最终结果、付款二维码链接（如果有）
+
+## 实现建议
+
+- 优先复用现有 CLI 和任务代码，不要复制一套新的抢票逻辑。
+- 配置解析只能有一个数据来源，不要在 CLI 模式和 service 模式之间分叉。
+- 返回结构化 JSON，而不是只返回人类可读日志。
+- 优先做本地调用场景，不要一开始就按公网服务设计。
+- 登录、日期选择、票档选择都属于流程中的硬关卡，接口层也不能跳过。
+- 环境层也要统一，避免一部分调用走系统 Python，一部分调用走 `.venv`。
+
+## 当前仓库里适合复用的入口
+
+- `main.py`：当前 CLI 入口
+- `app_cmd/buy.py`：参数整理和启动路径
+- `task/buy.py`：抢票执行流程
+- `task/endpoint.py`：现有的心跳/协作线索
+- `bilitickerbuy/__init__.py`：当前对 skill 暴露的 import 接口
+
+## 暂时不要做的事
+
+- 不要在还没有明确需求时设计一整套 REST API。
+- 不要把配置 schema 拆成多套版本。
+- 不要为了“以后可能要恢复任务”过早引入复杂持久化。
+- 不要绕过登录确认和用户选择，直接替用户猜日期、票档或实名人。

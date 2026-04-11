@@ -1,5 +1,5 @@
 {
-  "name": "bili-ticker-buy",
+  "name": "BiliTickerSkill",
   "version": "0.1.0",
   "entry": "SKILL.md",
   "targets": [

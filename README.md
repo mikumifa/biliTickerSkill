@@ -28,13 +28,29 @@ git submodule update --init --recursive
 
 推荐直接使用 `biliTickerBuy` 自己的 Python 环境，或在同一个 Python 3.11+ 环境中安装它的依赖。
 
+更推荐的做法是在 `biliTickerBuy` 目录执行：
+
+```bash
+uv sync
+```
+
+这样会准备好 `biliTickerBuy/.venv`，后续执行都优先使用这个环境。
+
 ## Examples
 
 ### 帮你抢票
 
 ```text
-用 bili-ticker-buy skill帮我买一张票，票的网址是https://show.bilibili.com/platform/detail.html?id=115465
+用 BiliTickerSkill 帮我买一张票，票的网址是https://show.bilibili.com/platform/detail.html?id=115465
 ```
+
+这个 skill 现在应该按阶段工作，而不是直接假设用户已经给全参数：
+
+1. 先检查是否已登录，未登录时必须让用户扫码
+2. 登录成功后再读取活动页面并列出可选日期、场次、票档
+3. 读取当前账号下的购票人和地址
+4. 如果用户不知道买哪一天或哪一档，就展示选项并让用户选择
+5. 最后才生成配置并校验后启动抢票
 
 ## Boundaries
 

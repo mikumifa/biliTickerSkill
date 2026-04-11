@@ -54,6 +54,24 @@ task = btb.start_managed_buy(
 status = btb.managed_task_status(task["run"]["run_id"])
 ```
 
+如果用户明确要求停止已经创建的持久化任务，使用：
+
+```python
+cancel_result = btb.cancel_managed_buy(task["run"]["run_id"])
+```
+
+如果用户明确要求删除任务记录，或需要先清理旧任务再重建，使用：
+
+```python
+delete_result = btb.delete_managed_buy(task["run"]["run_id"])
+```
+
+如果任务仍在运行，且调用方明确接受“先停再删”，才允许：
+
+```python
+delete_result = btb.delete_managed_buy(task["run"]["run_id"], force=True)
+```
+
 如果你不希望处理跨轮询状态，也可以直接：
 
 ```python
@@ -95,6 +113,26 @@ normalized_interval = btb.normalize_interval("0.36m")
 - `result.json` 用于读取最终支付链接和最终结论
 - `events.log` 只是调试补充，不应成为支付结果的唯一出口
 
+## 持久化任务生命周期
+
+对于 `start_managed_buy(...)` 创建的任务，推荐按下面的生命周期处理：
+
+1. `start_managed_buy(...)`
+   创建任务并返回 `run_id`
+2. `managed_task_status(run_id)`
+   查询任务当前状态、支付链接和结果
+3. `cancel_managed_buy(run_id)`
+   当用户明确要求“停止”“取消”“先别抢了”时，结束任务并把状态写成 `cancelled`
+4. `delete_managed_buy(run_id)`
+   当用户明确要求“删除任务”“清理旧任务”时，删除对应 `btb_runs/<run_id>/` 目录
+
+建议把“取消”和“删除”视为两个不同动作：
+
+- `cancel_managed_buy(...)` 负责停止任务，并保留状态与结果记录
+- `delete_managed_buy(...)` 负责删除持久化记录
+- 如果任务还在运行，优先先 `cancel`，再 `delete`
+- 只有在调用方明确接受强制清理时，才使用 `delete_managed_buy(..., force=True)`
+
 ## 规则
 
 1. 不要在用户还没确认选择前就提前启动抢票。
@@ -104,3 +142,5 @@ normalized_interval = btb.normalize_interval("0.36m")
 5. 如果只是需要一次执行完并拿结果，优先考虑 `run_buy_sync(...)`。
 6. 支付链接不要只靠日志传递；应优先通过 `result.json` 或 `managed_task_status(...)` 返回。
 7. 多开时每单都要使用独立 `run_id` 和独立运行目录。
+8. 对于持久化任务，应该明确区分“开始”“查询”“取消”“删除”四种动作，不要把它们混在同一个接口语义里。
+9. 删除任务前应先判断任务是否仍在运行；如果仍在运行，默认先取消，除非用户明确要求强制删除。

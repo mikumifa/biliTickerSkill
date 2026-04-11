@@ -10,7 +10,7 @@
 
 [快速开始](#quickstart) · [用户交互示例](#examples) · [能力边界](#boundaries)
 
-为什么二次元一年要抢这么多的票！ \*\*让你的 Codex / Claude Code 直接接管 `biliTickerBuy`
+为什么二次元一年要抢这么多的票！ **让你的 Codex / Claude Code 直接接管 `biliTickerBuy`**
 
 </div>
 

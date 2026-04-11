@@ -52,6 +52,8 @@ uv sync
 4. 如果用户不知道买哪一天或哪一档，就展示选项并让用户选择
 5. 最后才生成配置并校验后启动抢票
 
+它也应该能理解不那么规范的自然语言回复。例如用户说“普通车票 谢其卓 收货地址随便填一个”，skill 不应该机械地要求重填，而应该基于已有列表先推断联系人、电话和候选地址，再让用户确认。
+
 ## Boundaries
 
 它当前**不**能做：
@@ -61,8 +63,7 @@ uv sync
 ## 相关文件
 
 - [SKILL.md](./SKILL.md)：skill 触发说明与运行规则
-- [references/workflow.md](./references/workflow.md)：import-first 集成方式
-- [references/claude-code.md](./references/claude-code.md)：Claude Code 调用约定
+- [references/workflow.md](./references/workflow.md)：主要工作流说明
 
 ## 许可证
 

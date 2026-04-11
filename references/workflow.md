@@ -35,33 +35,16 @@ uv sync
 推荐直接 import：
 
 ```python
-import biliTickerBuy
+import bilitickerbuy
 ```
-
-如果项目只是本地目录，没有安装成包：
-
-```python
-import sys
-from pathlib import Path
-
-def find_skill_root() -> Path:
-    start = Path(__file__).resolve().parent if "__file__" in globals() else Path.cwd()
-    for candidate in [start, *start.parents]:
-        if (candidate / "SKILL.md").exists() and (candidate / "biliTickerBuy").exists():
-            return candidate
-    raise RuntimeError("找不到 BiliTickerSkill 根目录")
-
-SKILL_ROOT = find_skill_root()
-sys.path.insert(0, str(SKILL_ROOT.parent))
-import biliTickerBuy
-```
-
-这里查找的是 skill 仓库根目录，不是当前 shell 的工作目录。
 
 ## 当前暴露的库接口
 
 上游现在提供这些函数：
 
+- `start_qr_login`
+- `poll_qr_login`
+- `login_with_cookies`
 - `fetch_project_detail`
 - `fetch_ticket_options`
 - `fetch_buyers`
@@ -124,26 +107,101 @@ CLI 当前支持这些参数：
 
 这类自然语言请求适用，例如“帮我买这张票”：
 
-1. 先调 `biliTickerBuy.get_login_state(...)`。
-2. 如果 `logged_in` 是 `false`，流程必须停下，要求用户先扫码登录，不能继续取活动信息。
-3. 登录完成后，调 `biliTickerBuy.fetch_purchase_context(url_or_project_id, cookies=..., selected_date=None)`。
-4. 如果 `sales_dates` 非空且用户还没选日期，先把日期列出来让用户选。
-5. 把 `ticket_options` 列出来，让用户明确选中具体票档。
-6. 把登录账号下的 `buyers` 和 `addresses` 列出来，让用户明确选择。
-7. 额外收集 `buyer` 和 `tel` 这两个联系人字段。
-8. 用 `biliTickerBuy.build_ticket_config_from_selection` 生成最终配置。
-9. 然后再做校验和启动。
+1. 先调 `bilitickerbuy.get_login_state(...)`。
+2. 如果已经登录，把当前登录用户名显示给用户，并让用户确认是否使用这个账号继续。
+3. 如果 `logged_in` 是 `false`，先调 `bilitickerbuy.start_qr_login(...)` 获取登录信息。
+4. 把 `login_url` 放进返回给用户的结果里，让用户在手机上打开。
+5. 在同一个结果里明确让用户选择“已在手机打开并登录，继续检查”或“还没登录，稍后再试”。
+6. 只有当用户确认已登录时，再调 `bilitickerbuy.poll_qr_login(...)` 等待登录完成。
+7. 登录完成后，再把当前登录用户名显示给用户确认。
+8. 然后调 `bilitickerbuy.fetch_purchase_context(url_or_project_id, cookies=..., selected_date=None)`。
+9. 如果 `sales_dates` 非空且用户还没选日期，先把日期列出来让用户选。
+10. 把 `ticket_options` 列出来，让用户明确选中具体票档。
+11. 把登录账号下的 `buyers` 和 `addresses` 列出来，让用户明确选择。
+12. 额外收集 `buyer` 和 `tel` 这两个联系人字段。
+13. 用 `bilitickerbuy.build_ticket_config_from_selection` 生成最终配置。
+14. 然后再做校验和启动。
 
 有两个必须遵守的关卡：
 
 1. 登录关卡：未登录就不能继续。
 2. 选择关卡：用户没选日期或票档时，不能猜，必须停下来问。
 
+额外规则：
+
+1. 不允许打开原版 `biliTickerBuy` Gradio 页面。
+2. 所有步骤都必须通过对话和 import 接口完成。
+3. 默认优先返回登录链接，不要求必须展示二维码。
+4. 对用户的不完整自然语言要允许做合理推断，再让用户确认，不要死板要求固定模板。
+
+## 对话风格
+
+和用户对话时，优先用自然、口语化的问法，不要像在让用户填表。
+
+好的问法应该更像：
+
+- `你想买普通票还是 VIP？`
+- `我这边看到你这个账号下有几个“xxx的地址，我先给你挑两个最像的，你看用哪个？`
+- `联系电话我先默认用这个地址里的 1234567890，可以的话我就继续。`
+
+不好的问法是：
+
+- `请按以下格式回复：票档: 2`
+- `请填写 联系人: xxx`
+- `请填写 联系电话: xxx`
+
+原则是：
+
+1. 能推断就先推断。
+2. 能确认就先给默认理解让用户确认。
+3. 只有真的有歧义，才把候选方案抛给用户选。
+4. 不要把用户训练成必须按模板回话。
+
+## 票种推测
+
+当用户没有严格按固定格式回答时，不要立刻打回重填。
+
+优先按下面策略理解：
+
+1. 票档：优先按票档名称匹配，例如“普通车票”直接匹配对应票档。
+2. 购票人：优先按姓名匹配，如果只有一个明显候选，直接采用。
+3. 联系人：如果用户没写，优先沿用购票人姓名。
+4. 联系电话：如果用户没写，优先取最终选中地址里的电话。
+5. 地址：如果用户说“随便填一个”，优先选与购票人同名、或与联系人最匹配的地址。
+
+如果有多个同样合理的解释，不要强行选死，而是返回 1 到 3 个候选方案给用户选。
+
+例如：
+
+```text
+用户说：普通车票 xxx 收货地址随便填一个
+```
+
+可以返回：
+
+```text
+我理解你可能是下面几种意思，请选一个：
+
+1. 票类型x / 购票人 xxx / 联系人 xxx / 联系电话 12345678900 / 地址 3
+2. 票类型x / 购票人 xxx / 联系人 xxx / 联系电话 12345678900 / 地址 4
+3. 票类型x / 购票人 xxx / 联系人 xxx / 联系电话 12345678900 / 地址 1
+```
+
+如果有一个最明显的默认解释，也可以直接先给默认值，再让用户确认是否需要修改。
+
+推荐优先这样说：
+
+```text
+我先按这个理解继续：
+普通车票，购票人是xxx，联系人也先用xxx，电话先用地址里的号码。
+你看可以的话我就继续；如果你想换地址或者电话，直接跟我说。
+```
+
 ## 安全执行模式
 
 1. 先确认 `biliTickerBuy/.venv` 可用；不可用时先在 `biliTickerBuy` 目录运行 `uv sync`。
 2. 根据用户参数或交互式选择构造配置，或者读取现成 JSON。
-3. 先调用 `biliTickerBuy.validate_config`，有错误就停。
-4. 再调用 `biliTickerBuy.start_buy` 并传入运行参数。
-5. 持续轮询 `biliTickerBuy.task_status`，直到任务结束。
+3. 先调用 `bilitickerbuy.validate_config`，有错误就停。
+4. 再调用 `bilitickerbuy.start_buy` 并传入运行参数。
+5. 持续轮询 `bilitickerbuy.task_status`，直到任务结束。
 6. 运行时产物不要写回 git 跟踪的示例文件。

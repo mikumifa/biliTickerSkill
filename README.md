@@ -72,12 +72,3 @@ uv sync
 它当前**不**能做：
 
 - 抢b站会员购以外的票
-
-## 相关文件
-
-- [SKILL.md](./SKILL.md)：skill 触发说明与运行规则
-- [references/workflow.md](./references/workflow.md)：主要工作流说明
-
-## 许可证
-
-Skill 部分按当前仓库约定维护；`biliTickerBuy` 上游代码遵循其仓库内的 [MIT License](./biliTickerBuy/LICENSE)。

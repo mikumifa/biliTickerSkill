@@ -24,6 +24,11 @@
 6. 长时间等待、跨轮查询、多开并行时优先 `btb.start_managed_buy(...)`。
 7. 只有在同一个 Python 进程里立即轮询的短任务，才用 `btb.start_buy(...)` + `btb.task_status(...)`。
 8. 一旦拿到支付链接，立刻通过结构化结果返回给用户，不要只留在日志里。
+9. 当前接口返回里要区分三种支付字段：
+   `order_id` 是订单号，
+   `order_detail_url` 是订单详情页，
+   `payment_code_url` 才是 `getPayParam` 拿到的真实二维码链接；
+   `payment_qr_url` 仅保留为兼容旧调用方的别名。
 
 ## 接口建议
 

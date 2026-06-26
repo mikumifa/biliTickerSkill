@@ -42,8 +42,8 @@ validation = btb.validate_config(config)
 task = btb.start_managed_buy(
     config,
     runtime_options={
-        "time_start": "2026-04-12T00:36",
-        "interval": "500ms",
+        "time_start": btb.normalize_time_start("2026-04-12T00:36"),
+        "interval": btb.normalize_interval("500ms"),
     },
 )
 ```
@@ -83,6 +83,12 @@ result = btb.run_buy_sync(
 )
 ```
 
+如果你确实要走原生命令行而不是 import 层，参数名要和当前 CLI 保持一致，例如：
+
+```bash
+python main.py buy ./ticket.json --time-start 2026-04-12T00:36 --interval 500 --no-show-qrcode
+```
+
 ## 时间与轮询格式
 
 - `time_start`
@@ -97,6 +103,14 @@ result = btb.run_buy_sync(
 ```python
 normalized_time = btb.normalize_time_start("0:36")
 normalized_interval = btb.normalize_interval("0.36m")
+
+task = btb.start_managed_buy(
+    config,
+    runtime_options={
+        "time_start": normalized_time,
+        "interval": normalized_interval,
+    },
+)
 ```
 
 ## 持久化运行输出

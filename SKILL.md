@@ -34,12 +34,27 @@ import interface as btb
 fetch_purchase_context(project_input, *, cookies=None, cookies_path=None, selected_date=None, phone="") -> dict
 build_ticket_config_from_selection(purchase_context: dict, selection: dict) -> dict
 generate_ticket_config(parameters: dict) -> dict
+load_ticket_config(path) -> dict
+save_ticket_config(config, path, *, ensure_ascii=False, indent=2) -> Path
 get_login_state(*, cookies=None, cookies_path=None) -> dict
+start_qr_login(*, cookies_path=None) -> dict
+poll_qr_login(qrcode_key, *, cookies_path=None, timeout=120, poll_interval=2.0) -> dict
+login_with_cookies(cookies, *, cookies_path=None) -> dict
+search_tickets(keyword, *, page=1, pagesize=16, platform="web", cookies=None, cookies_path=None) -> dict
+format_ticket_search_results_text(search_result: dict, *, limit=10) -> str
+fetch_project_detail(project_input, *, cookies=None, cookies_path=None) -> dict
+fetch_ticket_options(project_input, *, cookies=None, cookies_path=None, selected_date=None) -> dict
+fetch_buyers(project_input, *, cookies=None, cookies_path=None) -> dict
+fetch_addresses(*, cookies=None, cookies_path=None) -> dict
 validate_config(config_or_path) -> dict-like ValidationResult
 start_buy(config_or_path, runtime_options: dict | None = None) -> dict
 task_status(task_id: str) -> dict
+run_buy_sync(config_or_path, runtime_options: dict | None = None) -> dict
 start_managed_buy(config_or_path, runtime_options: dict | None = None, run_id: str | None = None, runs_root: str | Path | None = None) -> dict
 managed_task_status(run_id: str, runs_root: str | Path | None = None) -> dict
+cancel_managed_buy(run_id: str, runs_root: str | Path | None = None) -> dict
+delete_managed_buy(run_id: str, runs_root: str | Path | None = None, force: bool = False) -> dict
+build_runtime_options(**kwargs) -> RuntimeOptions
 normalize_time_start(value) -> str
 normalize_interval(value) -> int
 ```
@@ -59,7 +74,7 @@ normalize_interval(value) -> int
 
 1. `references/workflow.md` 负责环境准备、登录、找漫展/搜票、选项确认、意图推断这些前置流程。
 2. 只有当用户明确表示“开始抢票”“现在下单”“继续开抢”之类意图时，才进入真正的抢票执行阶段。
-3. 真正启动 `build_ticket_config_from_selection`、`validate_config`、`start_buy`、`task_status`、`start_managed_buy`、`managed_task_status`、`run_buy_sync` 之前，再读取 `references/buy.md`。
+3. 真正启动 `build_ticket_config_from_selection`、`validate_config`、`start_buy`、`task_status`、`start_managed_buy`、`managed_task_status`、`cancel_managed_buy`、`delete_managed_buy`、`run_buy_sync` 之前，再读取 `references/buy.md`。
 
 ## 助手行为约束
 

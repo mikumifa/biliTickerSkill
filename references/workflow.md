@@ -80,25 +80,48 @@ import interface as btb
 - `task_status`
 - `start_managed_buy`
 - `managed_task_status`
+- `cancel_managed_buy`
+- `delete_managed_buy`
 - `normalize_time_start`
 - `normalize_interval`
 
 CLI 当前支持这些参数：
 
 - `buy <tickets_info>`
+- `--config-file`
 - `--interval`
-- `--time_start`
+- `--time-start`
 - `--https_proxys`
-- `--audio_path`
-- `--pushplusToken`
-- `--serverchanKey`
-- `--serverchan3ApiUrl`
-- `--barkToken`
-- `--ntfy_url`
-- `--ntfy_username`
-- `--ntfy_password`
-- `--web`
-- `--hide_random_message`
+- `--proxy-api-url`
+- `--proxy-api-protocol`
+- `--proxy-api-request-count`
+- `--create-retry-limit`
+- `--create-request-batch-size`
+- `--rate-limit-delay-ms`
+- `--refresh-interval-min-count`
+- `--refresh-interval-max-count`
+- `--proxy-max-consecutive-failures`
+- `--proxy-cooldown-seconds`
+- `--proxy-backoff-max-seconds`
+- `--use-local-token`
+- `--auto-open-payment-url`
+- `--log-level`
+- `--log-retention-days`
+- `--no-show-random-message`
+- `--no-show-qrcode`
+
+通知相关参数由 `NotifierConfig` 提供，常见项包括：
+
+- `--notifier-config.audio-path`
+- `--notifier-config.pushplus-token`
+- `--notifier-config.serverchan-key`
+- `--notifier-config.serverchan3-api-url`
+- `--notifier-config.bark-token`
+- `--notifier-config.meow-nickname`
+- `--notifier-config.ntfy-url`
+- `--notifier-config.ntfy-username`
+- `--notifier-config.ntfy-password`
+- `--notifier-config.notify-proxy-exhausted`
 
 推荐补充的参数约定：
 
@@ -114,6 +137,11 @@ CLI 当前支持这些参数：
   `500ms`
   `0.5s`
   `0.36m`
+
+这里要区分两层命名：
+
+1. Python `runtime_options` / `build_runtime_options(...)` 里使用的是下划线字段，例如 `time_start`、`show_random_message`。
+2. 真正的 CLI 参数使用的是短横线形式，例如 `--time-start`、`--no-show-random-message`、`--no-show-qrcode`。
 
 ## 配置结构
 
@@ -247,7 +275,7 @@ validation = btb.validate_config(config)
 5. 在同一个结果里明确让用户选择“已在手机打开并登录，继续检查”或“还没登录，稍后再试”。
 6. 只有当用户确认已登录时，再调 `btb.poll_qr_login(...)` 等待登录完成。
 7. 登录完成后，再把当前登录用户名显示给用户确认。
-8. 然后调 `btb.fetch_purchase_context(url_or_project_id, cookies=..., selected_date=None)`。
+8. 然后调 `btb.fetch_purchase_context(url_or_project_id, cookies=..., selected_date=None, phone="")`。
 9. 第一次进入票种选择阶段时，要一次性把完整关键信息发给用户，不要拆成多轮零散补充。
 10. 这一步优先使用表格，把活动、日期、票档、购票人、地址都排清楚。
 11. 如果 `sales_dates` 非空且用户还没选日期，先把日期列出来让用户选。
@@ -282,6 +310,7 @@ validation = btb.validate_config(config)
   3. 在这个目录下保存 `config.json`、`runtime.json`、`status.json`、`result.json`、`events.log`
   4. 子进程中强制关闭弹窗二维码，改用结构化结果里的支付链接
   5. 多开时通过多个 `run_id` 并行，不要依赖进程内存态 task id
+  6. 如果用户后续要求停止或清理任务，继续使用 `cancel_managed_buy(...)` / `delete_managed_buy(...)`
 
 ## 关键词找票
 

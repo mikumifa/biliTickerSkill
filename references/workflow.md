@@ -259,29 +259,29 @@ validation = btb.validate_config(config)
 
 真正开始执行抢票前，再参考 `references/buy.md`。如果还在登录、搜索、确认用户选择阶段，不要提前进入抢票执行 reference。
 
-## 长任务与多开
+  ## 长任务与多开
 
-`start_buy(...)` 和 `task_status(...)` 只适合同一个 Python 进程里的短时任务。
+  `start_buy(...)` 和 `task_status(...)` 只适合同一个 Python 进程里的短时任务。
 
-只要满足下面任一情况，就应默认切到持久化运行：
+  只要满足下面任一情况，就应默认切到持久化运行：
 
-- 任务可能要跑很久
-- 需要跨回合继续查询状态
-- 需要多开几单
-- 需要稳定回传支付链接
+  - 任务可能要跑很久
+  - 需要跨回合继续查询状态
+  - 需要多开几单
+  - 需要稳定回传支付链接
 
-这时优先使用：
+  这时优先使用：
 
-- `start_managed_buy(...)`
-- `managed_task_status(...)`
+  - `start_managed_buy(...)`
+  - `managed_task_status(...)`
 
-推荐行为：
+  推荐行为：
 
-1. 每次运行分配独立 `run_id`
-2. 每个 `run_id` 独占一个 `biliTickerBuy/btb_runs/<run_id>/` 目录
-3. 在这个目录下保存 `config.json`、`runtime.json`、`status.json`、`result.json`、`events.log`
-4. 子进程中强制关闭弹窗二维码，改用结构化结果里的支付链接
-5. 多开时通过多个 `run_id` 并行，不要依赖进程内存态 task id
+  1. 每次运行分配独立 `run_id`
+  2. 每个 `run_id` 独占一个 `biliTickerBuy/btb_runs/<run_id>/` 目录
+  3. 在这个目录下保存 `config.json`、`runtime.json`、`status.json`、`result.json`、`events.log`
+  4. 子进程中强制关闭弹窗二维码，改用结构化结果里的支付链接
+  5. 多开时通过多个 `run_id` 并行，不要依赖进程内存态 task id
 
 ## 关键词找票
 
